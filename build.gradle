@@ -1,0 +1,178 @@
+/* Gradle plugins used in this project */
+buildscript {
+    repositories {
+        maven {
+            credentials {
+                username nexusUserName
+                password nexusPassword
+            }
+            url "${nexusBaseUrl}/repositories/releases/"
+        }
+    }
+    dependencies {
+        classpath 'com.xebialabs.gradle.plugins.xlrelease:gradle-xl-release-plugin-plugin:0.0.2-rc.2'
+        classpath "com.xebialabs.gradle.plugins:gradle-xl-release-plugin:1.1.2"
+    }
+}
+
+plugins {
+    id 'java'
+    id 'com.moowork.node' version '0.12'
+    id "com.github.rzabini.gradle-jython" version "1.0.0"
+}
+apply plugin: 'com.xebialabs.xl-release.plugin'
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'xebialabs.release'
+
+/* Configuration of Node */
+node {
+    version = '6.3.1'
+    npmVersion = '3.6.0'
+    download = true
+}
+def distName = "xl-release"
+
+def xlrBase = "xl-release-server"
+
+repositories {
+    maven {
+        credentials {
+            username nexusUserName
+            password nexusPassword
+        }
+        url "${nexusBaseUrl}/repositories/releases/"
+    }
+}
+
+release {
+    grgit = org.ajoberstar.grgit.Grgit.open()
+}
+tasks.release.dependsOn tasks.clean
+tasks.prepare.mustRunAfter tasks.clean
+
+configurations {
+    xlrDist
+    xlrRemotingPlugin
+}
+dependencies {
+    compile 'com.xebialabs.deployit:udm-plugin-api:2015.2.13'
+    xlrDist "com.xebialabs.xlrelease:${distName}:${xlrVersion}:server@zip"
+    xlrRemotingPlugin "com.xebialabs.xlrelease.plugins:xlr-remoting-plugin:${xlrRemotingPluginVersion}@jar"
+}
+
+task copyXlrDist(type: Copy) {
+    from configurations.xlrDist
+    into file("${xlrBase}")
+}
+
+task unzipDist(type: Copy) {
+    from zipTree(file("${xlrBase}/${distName}-${xlrVersion}-server.zip"))
+    into file("${xlrBase}")
+}
+
+/* Configure XL Release Gradle plugin */
+xlReleasePlugin {
+    // This enables or disables hot reloading of web and Jython sources
+    useSourcesDirectly = true
+    xlReleaseHome = './xl-release-server/xl-release-5.0.1-server'
+}
+
+task copyXlrRemotingPlugin(type: Copy) {
+    from configurations.xlrRemotingPlugin
+    into "${xlReleasePlugin.xlReleaseHome}/plugins"
+}
+
+/* Configure this project */
+group 'com.xebialabs.xlrelease.plugins'
+
+task startHttpServer(type: HttpServer) {
+    doFirst {
+        println 'Starting server'
+        File root = new File('src/test/resources')
+        int port = project.hasProperty("httpServerPort") ? Integer.parseInt(project.property("httpServerPort")) : 8001
+        SimpleHttpFileServerFactory factory = new SimpleHttpFileServerFactory()
+        server = factory.start(root, port)
+        println "Server started in directory " + server.getContentRoot()
+    }
+}
+
+task npmPrune(type: NpmTask) {
+    npmCommand = ['prune']
+    inputs.file 'package.json'
+    outputs.dir 'node_modules'
+}
+
+npmInstall.mustRunAfter npmPrune
+
+task npmDependencies(dependsOn: [npmPrune, npmInstall])
+
+task stopHttpServer(type: HttpServer) {
+    doLast {
+        if (server != null) {
+            println 'Stopping Server..'
+            server.stop()
+        }
+    }
+}
+unzipDist.dependsOn copyXlrDist
+copyXlrRemotingPlugin.dependsOn unzipDist
+startXLRelease.dependsOn npmDependencies, copyXlrRemotingPlugin
+
+task testEnd2End(type: NpmTask, dependsOn: startXLRelease) {
+    args = ['run', 'protractor']
+}
+testEnd2End.dependsOn startHttpServer
+
+testEnd2End.finalizedBy stopXLRelease, stopHttpServer
+
+
+sourceSets.main.resources.srcDirs = ["src/main/jython", "src/main/resources"]
+sourceSets.test.resources.srcDirs = ["src/test/jython", "src/test/resources"]
+
+task cleanUpTestJython(type: Delete) {
+    delete fileTree(dir: "$projectDir/src/test/jython", include: "**/*.class")
+}
+
+task jythonClasses(type: Copy) {
+    from 'src/main/resources'
+    into "${project.buildDir}/classes/main"
+    include '**/*.py'
+    includeEmptyDirs = false
+}
+
+task testJython(type: JavaExec, dependsOn: ['jythonClasses']) {
+    main 'org.python.util.jython'
+    classpath configurations.jython.asPath
+    systemProperties(['python.path': "${project.buildDir}/classes/main"])
+    args file("$projectDir/src/test/jython/xlunittestrunner/runtests.py")
+    args "$projectDir/src/test/jython"
+}
+
+testJython.finalizedBy cleanUpTestJython
+
+test.dependsOn testJython
+
+// Uncomment following line if you implement Java/Scala code depending on XL Release classes
+//configurations.compile.extendsFrom configurations.xlReleaseJars
+
+// Uncomment following line if your plugin depends on additional libraries
+dependencies {
+    xlReleaseAdditionalClasspath('com.xebialabs.deployit:udm-plugin-api:2015.2.13')
+}
+
+class HttpServer extends DefaultTask {
+    static HttpFileServer server = null
+}
+
+uploadArchives {
+    repositories {
+        maven {
+            credentials {
+                username nexusUserName
+                password nexusPassword
+            }
+            url "${nexusBaseUrl}/repositories/releases/"
+        }
+    }
+}

@@ -1,0 +1,36 @@
+<synthetic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns="http://www.xebialabs.com/deployit/synthetic"
+           xsi:schemaLocation="http://www.xebialabs.com/deployit/synthetic synthetic.xsd">
+
+
+    <type type="kubernetes.conf" extends="xlrelease.PythonScript" virtual="true">
+        <property name="iconLocation" default="kubernetes/kubernetes_logo.svg" hidden="true"/>
+        <property name="taskColor" hidden="true" default="#009CDB"/>
+        <property name="host" kind="ci" referenced-type="host.Unix" category="input" description="Kubctl machine"/>
+        <property name="kubectlPath" default="/usr/local/bin/kubectl" hidden="true" category="input"  required="true" description="Complete path of the kubectl executable"/>
+    </type>
+
+    <type type="kubernetes.task" extends="kubernetes.conf" virtual="true">
+        <property name="scriptLocation" required="false" hidden="true" default="kubernetes/task.py" />
+        <property name="spec" required="false" label="Configuration file"  size="large"  category="input" description="Configuration in json|yaml format" />
+        <property name="url" category="input" required="false" description="Kubernetes configuration file URL" />
+        <property name="username" category="input" required="false" description="Username to download configuration file."  />
+        <property name="password" password="true" category="input" required="false" description="Password to download configuration file." />
+        <property name="cmdParams" label="Additional command line parameters"  category="input" required="false" description="Command line params that's needed to pass with kubectl command."/>
+    </type>
+
+    <type type="kubernetes.createConf" label="Create resource"  extends="kubernetes.task">
+        <property name="command" category="input" hidden="true" default="create" />
+    </type>
+    <type type="kubernetes.removeConf" label="Remove resource"  extends="kubernetes.task">
+        <property name="command" category="input" hidden="true" default="delete" />
+    </type>
+
+    <type type="kubernetes.wait" extends="kubernetes.conf">
+        <property name="scriptLocation" required="false" hidden="true" default="kubernetes/wait.py" />
+        <property name="retryCount" kind="integer" category="input" default="10" />
+        <property name="waitInSeconds" kind="integer" category="input" default="5" />
+        <property name="command" category="input" description="Command to run on host" />
+        <property name="pattern" category="input" description="Pattern to match in command output"/>
+    </type>
+</synthetic>
