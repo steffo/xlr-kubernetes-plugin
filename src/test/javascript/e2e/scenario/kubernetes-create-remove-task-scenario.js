@@ -67,7 +67,7 @@ describe('kubernetes create task', () => {
         Page.openConfiguration()
             .addNewInstance('Add Unix Host')
             .setTextField('title', kubernetesServer)
-            .setTextField('address', 'base-itest32.xebialabs.com')
+            .setTextField('address', 'overthere-xlr-itest.xebialabs.com')
             .setTextField('port', '22')
             .setTextField('username', 'vagrant')
             .setTextField('password', 'vagrant')
