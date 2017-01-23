@@ -10,6 +10,7 @@ buildscript {
         }
     }
     dependencies {
+        classpath "com.xebialabs.gradle.plugins:gradle-xl-plugins-plugin:${xlPluginsPluginVersion}"
         classpath 'com.xebialabs.gradle.plugins.xlrelease:gradle-xl-release-plugin-plugin:0.0.2-rc.2'
         classpath "com.xebialabs.gradle.plugins:gradle-xl-release-plugin:1.1.2"
     }
@@ -21,6 +22,7 @@ plugins {
     id "com.github.rzabini.gradle-jython" version "1.0.0"
 }
 apply plugin: 'com.xebialabs.xl-release.plugin'
+apply plugin: "xebialabs.dependency"
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'xebialabs.release'
@@ -36,12 +38,14 @@ def distName = "xl-release"
 def xlrBase = "xl-release-server"
 
 repositories {
-    maven {
-        credentials {
-            username nexusUserName
-            password nexusPassword
+    ["releases", "alphas"].each { r ->
+        maven {
+            url "${nexusBaseUrl}/repositories/${r}"
+            credentials {
+                username nexusUserName
+                password nexusPassword
+            }
         }
-        url "${nexusBaseUrl}/repositories/releases/"
     }
 }
 
@@ -57,7 +61,7 @@ configurations {
 }
 dependencies {
     compile 'com.xebialabs.deployit:udm-plugin-api:2015.2.13'
-    xlrDist "com.xebialabs.xlrelease:${distName}:${xlrVersion}:server@zip"
+    xlrDist "com.xebialabs.xlrelease:${distName}:${xlReleaseVersion}:server@zip"
     xlrRemotingPlugin "com.xebialabs.xlrelease.plugins:xlr-remoting-plugin:${xlrRemotingPluginVersion}@jar"
 }
 
@@ -67,15 +71,20 @@ task copyXlrDist(type: Copy) {
 }
 
 task unzipDist(type: Copy) {
-    from zipTree(file("${xlrBase}/${distName}-${xlrVersion}-server.zip"))
+    from zipTree(file("${xlrBase}/${distName}-${xlReleaseVersion}-server.zip"))
     into file("${xlrBase}")
+}
+
+task clearPlugins(type: Delete) {
+    delete fileTree(dir: "${xlrBase}/${distName}-${xlReleaseVersion}-server/plugins")
+    followSymlinks = true
 }
 
 /* Configure XL Release Gradle plugin */
 xlReleasePlugin {
     // This enables or disables hot reloading of web and Jython sources
     useSourcesDirectly = true
-    xlReleaseHome = './xl-release-server/xl-release-5.0.1-server'
+    xlReleaseHome = "./xl-release-server/${distName}-${xlReleaseVersion}-server"
 }
 
 task copyXlrRemotingPlugin(type: Copy) {
@@ -116,7 +125,8 @@ task stopHttpServer(type: HttpServer) {
     }
 }
 unzipDist.dependsOn copyXlrDist
-copyXlrRemotingPlugin.dependsOn unzipDist
+clearPlugins.dependsOn unzipDist
+copyXlrRemotingPlugin.dependsOn clearPlugins
 startXLRelease.dependsOn npmDependencies, copyXlrRemotingPlugin
 
 task testEnd2End(type: NpmTask, dependsOn: startXLRelease) {

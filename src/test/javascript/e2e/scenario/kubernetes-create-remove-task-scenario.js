@@ -48,9 +48,15 @@ const waitTaskConfig = { "wait": {"command": waitTaskCommand, "pattern": waitTas
 const urlTaskConfig = { "url": url, "username": username, "password": password};
 
 describe('kubernetes create task', () => {
-    beforeEach(() => {
-
+    beforeAll(()=>{
         LoginPage.login('admin', 'admin');
+    });
+
+    afterAll(()=>{
+        LoginPage.logout();
+    });
+
+    beforeEach(() => {
         fixtures().release({
             id: 'ReleaseWithKubeCreateTask',
             title: 'ReleaseWithKubernetesCreateTask',
@@ -79,7 +85,6 @@ describe('kubernetes create task', () => {
     afterEach(() => {
         fixtures().clean();
         Page.openConfiguration().deleteInstance(kubernetesServer);
-        LoginPage.logout();
     });
 
     it('should create and remove kubernetes resource with json', () => {
