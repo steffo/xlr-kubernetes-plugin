@@ -24,10 +24,10 @@
         <property name="cmdParams" label="Additional command line parameters"  category="input" required="false" description="Command line params that's needed to pass with kubectl command."/>
     </type>
 
-    <type type="kubernetes.createConf" label="Create resource"  extends="kubernetes.task">
+    <type type="kubernetes.createConf" label="Create Resource"  extends="kubernetes.task">
         <property name="command" category="input" hidden="true" default="create" />
     </type>
-    <type type="kubernetes.removeConf" label="Remove resource"  extends="kubernetes.task">
+    <type type="kubernetes.removeConf" label="Remove Resource"  extends="kubernetes.task">
         <property name="command" category="input" hidden="true" default="delete" />
     </type>
 
