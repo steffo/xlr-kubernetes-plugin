@@ -61,7 +61,7 @@ configurations {
 }
 dependencies {
     compile 'com.xebialabs.deployit:udm-plugin-api:2015.2.13'
-    xlrDist "com.xebialabs.xlrelease:${distName}:${xlReleaseVersion}:server@zip"
+    xlrDist "com.xebialabs.xlrelease:${distName}-base:${xlReleaseVersion}:server@zip"
     xlrRemotingPlugin "com.xebialabs.xlrelease.plugins:xlr-remoting-plugin:${xlrRemotingPluginVersion}@jar"
 }
 
@@ -71,13 +71,8 @@ task copyXlrDist(type: Copy) {
 }
 
 task unzipDist(type: Copy) {
-    from zipTree(file("${xlrBase}/${distName}-${xlReleaseVersion}-server.zip"))
+    from zipTree(file("${xlrBase}/${distName}-base-${xlReleaseVersion}-server.zip"))
     into file("${xlrBase}")
-}
-
-task clearPlugins(type: Delete) {
-    delete fileTree(dir: "${xlrBase}/${distName}-${xlReleaseVersion}-server/plugins")
-    followSymlinks = true
 }
 
 /* Configure XL Release Gradle plugin */
@@ -125,8 +120,7 @@ task stopHttpServer(type: HttpServer) {
     }
 }
 unzipDist.dependsOn copyXlrDist
-clearPlugins.dependsOn unzipDist
-copyXlrRemotingPlugin.dependsOn clearPlugins
+copyXlrRemotingPlugin.dependsOn unzipDist
 startXLRelease.dependsOn npmDependencies, copyXlrRemotingPlugin
 
 task testEnd2End(type: NpmTask, dependsOn: startXLRelease) {
