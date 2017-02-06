@@ -22,7 +22,7 @@ plugins {
     id "com.github.rzabini.gradle-jython" version "1.0.0"
 }
 apply plugin: 'com.xebialabs.xl-release.plugin'
-apply plugin: "xebialabs.dependency"
+apply plugin: "com.xebialabs.dependency"
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'xebialabs.release'
